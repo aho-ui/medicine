@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from django.http import JsonResponse
+from .services import call_colab_api
 
-# Create your views here.
+
+def test_colab_connection(request):
+    result = call_colab_api()
+    return JsonResponse(result)

@@ -135,3 +135,6 @@ AUTH_USER_MODEL = "core.User"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Colab API
+COLAB_API_URL = os.getenv("COLAB_API_URL", "")
