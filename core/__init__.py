@@ -1,0 +1,1 @@
+# Core app - medicine lot management and tracking
