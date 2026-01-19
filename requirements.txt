@@ -3,3 +3,7 @@ psycopg2-binary
 python-dotenv
 pillow
 requests
+
+# Blockchain
+web3
+py-solc-x
