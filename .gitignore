@@ -45,6 +45,19 @@ Thumbs.db
 # Context
 .context/
 
+# Blockchain
+ganache_data/
+*.address
+*.mnemonic
+
+# Dataset
+dataset/
+
+# Hidden files (starting with .)
+.*
+!.gitignore
+!.env.example
+
 # Migrations (optional - uncomment if you want to ignore migrations)
 # */migrations/*.py
 # !*/migrations/__init__.py
