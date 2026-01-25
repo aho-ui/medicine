@@ -21,14 +21,8 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "result",
-        "type": "string"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
-        "name": "confidence",
+        "name": "detectionCount",
         "type": "uint256"
       },
       {
@@ -71,13 +65,8 @@
       },
       {
         "internalType": "string",
-        "name": "result",
+        "name": "detectionsJson",
         "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "confidence",
-        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -88,6 +77,30 @@
         "internalType": "address",
         "name": "recorder",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_imageHash",
+        "type": "string"
+      }
+    ],
+    "name": "getVerificationByHash",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -109,18 +122,56 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "imageHashExists",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "imageHashToId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "string",
         "name": "_imageHash",
         "type": "string"
       },
       {
         "internalType": "string",
-        "name": "_result",
+        "name": "_detectionsJson",
         "type": "string"
       },
       {
         "internalType": "uint256",
-        "name": "_confidence",
+        "name": "_detectionCount",
         "type": "uint256"
       }
     ],
@@ -152,13 +203,8 @@
       },
       {
         "internalType": "string",
-        "name": "result",
+        "name": "detectionsJson",
         "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "confidence",
-        "type": "uint256"
       },
       {
         "internalType": "uint256",
