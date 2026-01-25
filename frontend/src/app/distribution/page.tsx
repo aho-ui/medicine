@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { API_URL } from "@/lib/api";
 
 interface Lot {
   id: string;
@@ -26,8 +27,8 @@ export default function DistributionPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("http://127.0.0.1:8000/api/lots/").then((r) => r.json()),
-      fetch("http://127.0.0.1:8000/api/distribution/").then((r) => r.json()),
+      fetch(`${API_URL}/lots/`).then((r) => r.json()),
+      fetch(`${API_URL}/distribution/`).then((r) => r.json()),
     ])
       .then(([lotsData, eventsData]) => {
         setLots(lotsData.lots || []);
@@ -62,8 +63,8 @@ export default function DistributionPage() {
 
       // Refresh data
       const [lotsData, eventsData] = await Promise.all([
-        fetch("http://127.0.0.1:8000/api/lots/").then((r) => r.json()),
-        fetch("http://127.0.0.1:8000/api/distribution/").then((r) => r.json()),
+        fetch(`${API_URL}/lots/`).then((r) => r.json()),
+        fetch(`${API_URL}/distribution/`).then((r) => r.json()),
       ]);
       setLots(lotsData.lots || []);
       setEvents(eventsData.events || []);
