@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import Nav from "@/components/Nav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Medicine Verification System",
+  title: "MedVerifyChain",
   description: "Medicine Tracking & Anti-Counterfeit System",
 };
 
@@ -29,12 +27,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <Nav />
-          <main className="p-4">
-            {children}
-          </main>
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );

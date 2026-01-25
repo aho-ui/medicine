@@ -8,6 +8,26 @@ from io import BytesIO, StringIO
 from .models import MedicineLot, DistributionEvent, User
 
 
+@require_http_methods(["GET"])
+def health(request):
+    """Health check for Django backend."""
+    return JsonResponse({"status": "ok"})
+
+
+@require_http_methods(["GET"])
+def health_blockchain(request):
+    """Health check for Ganache blockchain connection."""
+    try:
+        from blockchain.utils import w3
+        connected = w3.is_connected()
+        if connected:
+            block = w3.eth.block_number
+            return JsonResponse({"status": "ok", "block_number": block})
+        return JsonResponse({"status": "error", "message": "Not connected"}, status=503)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=503)
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def lots(request):
