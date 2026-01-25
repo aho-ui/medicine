@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/api";
 
 export default function RegisterLotPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function RegisterLotPage() {
     };
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/lots/", {
+      const res = await fetch(`${API_URL}/lots/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

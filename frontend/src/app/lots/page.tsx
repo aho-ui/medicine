@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { API_URL } from "@/lib/api";
 
 interface Lot {
   id: string;
@@ -18,7 +19,7 @@ export default function LotsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/lots/")
+    fetch(`${API_URL}/lots/`)
       .then((res) => res.json())
       .then((data) => setLots(data.lots || []))
       .finally(() => setLoading(false));
@@ -40,6 +41,7 @@ export default function LotsPage() {
               <th className="border p-2">Producer</th>
               <th className="border p-2">Remaining</th>
               <th className="border p-2">Expiry</th>
+              <th className="border p-2">QR</th>
             </tr>
           </thead>
           <tbody>
@@ -50,6 +52,16 @@ export default function LotsPage() {
                 <td className="border p-2">{lot.producer}</td>
                 <td className="border p-2">{lot.remaining_quantity} / {lot.total_quantity}</td>
                 <td className="border p-2">{lot.expiry_date}</td>
+                <td className="border p-2">
+                  <a
+                    href={`${API_URL}/lots/${lot.id}/qr/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline"
+                  >
+                    View
+                  </a>
+                </td>
               </tr>
             ))}
           </tbody>
