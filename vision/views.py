@@ -22,8 +22,8 @@ def verify(image_bytes):
     }
 
 
-def record(image_hash, result, confidence):
-    tx_result = record_verification(image_hash, result, confidence)
+def record(image_hash, detections):
+    tx_result = record_verification(image_hash, detections)
     return {
         "tx_hash": tx_result["tx_hash"],
         "block": tx_result["block"],
@@ -42,7 +42,7 @@ def verify_and_record(request):
 
         verification = verify(image_bytes)
 
-        if verification["result"] is None:
+        if verification["result"] is None or len(verification["detections"]) == 0:
             return JsonResponse({
                 "result": None,
                 "confidence": 0.0,
@@ -52,8 +52,7 @@ def verify_and_record(request):
 
         blockchain = record(
             verification["image_hash"],
-            verification["result"],
-            verification["confidence"]
+            verification["detections"]
         )
 
         return JsonResponse({

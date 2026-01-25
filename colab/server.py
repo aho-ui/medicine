@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
 YOLO_MODEL_PATH = f"{MODEL_DIR}/medicine_yolo.pt"
 CNN_MODEL_PATH = f"{MODEL_DIR}/medicine_cnn.h5"
-IMG_SIZE = 160
+IMG_SIZE = 224
 
 app = Flask(__name__)
 

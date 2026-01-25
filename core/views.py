@@ -1,7 +1,10 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+import csv
+import qrcode
+from io import BytesIO, StringIO
 from .models import MedicineLot, DistributionEvent, User
 
 
@@ -102,3 +105,87 @@ def distribution(request):
         lot.save()
 
         return JsonResponse({"id": str(event.id), "remaining_quantity": lot.remaining_quantity})
+
+
+@require_http_methods(["GET"])
+def users(request):
+    data = [{
+        "id": u.id,
+        "username": u.username,
+        "email": u.email,
+        "role": u.role,
+        "company_name": u.company_name
+    } for u in User.objects.all()]
+    return JsonResponse({"users": data})
+
+
+@require_http_methods(["GET"])
+def audit(request):
+    logs = []
+
+    for lot in MedicineLot.objects.all():
+        logs.append({
+            "action": "LOT_CREATED",
+            "user": lot.producer.email,
+            "details": f"Lot {lot.lot_number}",
+            "timestamp": lot.created_at.isoformat()
+        })
+
+    for event in DistributionEvent.objects.all():
+        logs.append({
+            "action": "DISTRIBUTION",
+            "user": event.actor.email,
+            "details": f"{event.quantity} units to {event.location}",
+            "timestamp": event.timestamp.isoformat()
+        })
+
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+    return JsonResponse({"logs": logs})
+
+
+@require_http_methods(["GET"])
+def lot_qr(request, lot_id):
+    try:
+        lot = MedicineLot.objects.get(id=lot_id)
+    except MedicineLot.DoesNotExist:
+        return JsonResponse({"error": "Lot not found"}, status=404)
+
+    qr = qrcode.make(str(lot.id))
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return HttpResponse(buffer, content_type="image/png")
+
+
+@require_http_methods(["GET"])
+def audit_export(request):
+    logs = []
+
+    for lot in MedicineLot.objects.all():
+        logs.append({
+            "action": "LOT_CREATED",
+            "user": lot.producer.email,
+            "details": f"Lot {lot.lot_number}",
+            "timestamp": lot.created_at.isoformat()
+        })
+
+    for event in DistributionEvent.objects.all():
+        logs.append({
+            "action": "DISTRIBUTION",
+            "user": event.actor.email,
+            "details": f"{event.quantity} units to {event.location}",
+            "timestamp": event.timestamp.isoformat()
+        })
+
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Action", "User", "Details", "Timestamp"])
+    for log in logs:
+        writer.writerow([log["action"], log["user"], log["details"], log["timestamp"]])
+
+    response = HttpResponse(output.getvalue(), content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=audit_logs.csv"
+    return response

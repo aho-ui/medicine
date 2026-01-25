@@ -24,3 +24,18 @@ class VisionInspection(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class BlockchainAddress(models.Model):
+    image_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    verification_id = models.IntegerField()
+    tx_hash = models.CharField(max_length=66)
+    block_number = models.IntegerField()
+    timestamp = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Verification {self.verification_id} - {self.image_hash[:16]}..."
+
+    class Meta:
+        ordering = ["-created_at"]
