@@ -1,13 +1,26 @@
 "use client";
 import { useState } from "react";
+import { VISION_URL } from "@/lib/api";
+
+interface Detection {
+  bbox: number[];
+  yolo_label: string;
+  yolo_confidence: number;
+  cnn_label: string;
+  cnn_confidence: number;
+  result: "GENUINE" | "SUSPICIOUS" | "COUNTERFEIT";
+}
 
 interface VerificationResult {
-  result: "GENUINE" | "SUSPICIOUS" | "COUNTERFEIT";
+  result: string;
   confidence: number;
-  manufacturer: string;
-  product_name: string;
-  expiry_date: string;
-  blockchain_txid: string;
+  detections: Detection[];
+  blockchain: {
+    tx_hash: string;
+    block: number;
+    verification_id: number;
+    already_verified?: boolean;
+  };
 }
 
 export default function VerifyPage() {
@@ -41,16 +54,17 @@ export default function VerifyPage() {
       const formData = new FormData();
       formData.append("image", image);
 
-      const res = await fetch("http://127.0.0.1:8000/vision/verify/", {
+      const res = await fetch(`${VISION_URL}/verify/`, {
         method: "POST",
         body: formData,
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error("Verification failed");
+        throw new Error(data.error || "Verification failed");
       }
 
-      const data = await res.json();
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
@@ -97,40 +111,49 @@ export default function VerifyPage() {
 
       {result && (
         <div className="mt-4 p-4 border">
-          <h2 className="text-xl font-bold mb-2">Verification Result</h2>
+          <h2 className="text-xl font-bold mb-4">Verification Result</h2>
 
-          <div className={`text-2xl font-bold mb-4 ${
-            result.result === "GENUINE" ? "text-green-600" :
-            result.result === "SUSPICIOUS" ? "text-yellow-600" :
-            "text-red-600"
-          }`}>
-            {result.result}
+          {result.blockchain.already_verified && (
+            <div className="mb-4 p-3 bg-blue-900 text-blue-200 border border-blue-600">
+              <div className="font-bold mb-1">Previously Verified</div>
+              <div className="text-sm">Verification ID: {result.blockchain.verification_id}</div>
+            </div>
+          )}
+
+          <div className="mb-4">
+            <div className="font-medium">Blockchain TX</div>
+            <div className="text-xs break-all">{result.blockchain.tx_hash}</div>
+            {result.blockchain.block > 0 && (
+              <div className="text-sm text-gray-400">Block: {result.blockchain.block}</div>
+            )}
           </div>
 
-          <table className="w-full">
-            <tbody>
-              <tr>
-                <td className="py-1 font-medium">Confidence</td>
-                <td>{(result.confidence * 100).toFixed(1)}%</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-medium">Product</td>
-                <td>{result.product_name}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-medium">Manufacturer</td>
-                <td>{result.manufacturer}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-medium">Expiry Date</td>
-                <td>{result.expiry_date}</td>
-              </tr>
-              <tr>
-                <td className="py-1 font-medium">Blockchain TX</td>
-                <td className="text-xs break-all">{result.blockchain_txid}</td>
-              </tr>
-            </tbody>
-          </table>
+          <h3 className="text-lg font-bold mb-2">Detections ({result.detections.length})</h3>
+
+          <div className="space-y-4">
+            {result.detections.map((detection, idx) => (
+              <div key={idx} className="p-3 border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold">Package {idx + 1}</span>
+                  <span className={`text-xl font-bold ${
+                    detection.result === "GENUINE" ? "text-green-600" :
+                    detection.result === "SUSPICIOUS" ? "text-yellow-600" :
+                    "text-red-600"
+                  }`}>
+                    {detection.result}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="font-medium">YOLO:</span> {detection.yolo_label} ({(detection.yolo_confidence * 100).toFixed(1)}%)
+                  </div>
+                  <div>
+                    <span className="font-medium">CNN:</span> {detection.cnn_label} ({(detection.cnn_confidence * 100).toFixed(1)}%)
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
