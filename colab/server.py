@@ -87,8 +87,6 @@ def verify_image(image_array):
     return {
         "status": "success",
         "message": "Verification complete",
-        "result": detections[0]["result"] if len(detections) == 1 else "MULTIPLE_PACKAGES",
-        "confidence": detections[0]["cnn_confidence"] if len(detections) == 1 else 0.0,
         "detections": detections
     }
 

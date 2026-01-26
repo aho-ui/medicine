@@ -15,8 +15,6 @@ def verify(image_bytes):
     colab_result = verify_with_colab(image_bytes)
     image_hash = hash_image(image_bytes)
     return {
-        "result": colab_result.get("result"),
-        "confidence": colab_result.get("confidence"),
         "detections": colab_result.get("detections", []),
         "image_hash": image_hash
     }
@@ -42,10 +40,8 @@ def verify_and_record(request):
 
         verification = verify(image_bytes)
 
-        if verification["result"] is None or len(verification["detections"]) == 0:
+        if len(verification["detections"]) == 0:
             return JsonResponse({
-                "result": None,
-                "confidence": 0.0,
                 "detections": [],
                 "blockchain": None
             })
@@ -56,8 +52,6 @@ def verify_and_record(request):
         )
 
         return JsonResponse({
-            "result": verification["result"],
-            "confidence": verification["confidence"],
             "detections": verification["detections"],
             "blockchain": blockchain
         })
