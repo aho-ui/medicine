@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Maximize2, X, RefreshCw } from "lucide-react";
 import { useStatus } from "@/hooks/useStatus";
 import { statusStyles } from "@/lib/styles";
+import { type VerificationResult } from "@/lib/api";
 
-// Import components
 import { VerifyCard, VerifyExpanded, verifyConfig } from "@/components/verify";
 import { LotsCard, LotsExpanded, lotsConfig } from "@/components/lots";
 import { DistributionCard, DistributionExpanded, distributionConfig } from "@/components/distribution";
@@ -25,6 +25,10 @@ const cards = [
 export default function DashboardPage() {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const { system, blockchain, lastSyncLabel, isRefreshing, refresh } = useStatus();
+
+  const [verifyResult, setVerifyResult] = useState<VerificationResult | null>(null);
+  const [verifyImageUrl, setVerifyImageUrl] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const activeCard = cards.find((c) => c.id === expandedCard);
 
@@ -145,7 +149,18 @@ export default function DashboardPage() {
 
             {/* Expanded Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <activeCard.expanded />
+              {activeCard.id === "verify" ? (
+                <VerifyExpanded
+                  result={verifyResult}
+                  setResult={setVerifyResult}
+                  imageUrl={verifyImageUrl}
+                  setImageUrl={setVerifyImageUrl}
+                  error={verifyError}
+                  setError={setVerifyError}
+                />
+              ) : (
+                <activeCard.expanded />
+              )}
             </div>
 
             {/* Footer */}

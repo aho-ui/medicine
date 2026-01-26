@@ -40,6 +40,7 @@ export interface VerificationResult {
     tx_hash: string;
     block: number;
     verification_id: number;
+    already_verified: boolean;
   } | null;
 }
 
@@ -57,5 +58,30 @@ export async function verifyMedicine(image: File): Promise<VerificationResult> {
     throw new Error(error.error || "Verification failed");
   }
 
+  return res.json();
+}
+
+// Stats
+export interface VerificationStats {
+  stats: {
+    genuine: number;
+    suspicious: number;
+    counterfeit: number;
+  };
+  recent: {
+    id: string;
+    result: string;
+    confidence: number;
+    created_at: string;
+    hash: string;
+  }[];
+  total: number;
+}
+
+export async function getVerificationStats(): Promise<VerificationStats> {
+  const res = await fetch(`${VISION_URL}/stats/`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch stats");
+  }
   return res.json();
 }

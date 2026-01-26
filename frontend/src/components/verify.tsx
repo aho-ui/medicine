@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ShieldCheck, CheckCircle2, XCircle, Upload, Loader2, X, Maximize2 } from "lucide-react";
 import { verificationStyles, type VerificationStatus } from "@/lib/styles";
-import { verifyMedicine, type VerificationResult, type Detection } from "@/lib/api";
+import { verifyMedicine, getVerificationStats, type VerificationResult, type Detection, type VerificationStats } from "@/lib/api";
 
 function CroppedImage({
   imageUrl,
@@ -190,23 +190,19 @@ function DetectionCard({
   );
 }
 
-// Placeholder data - replace with real data later
-const stats = {
-  genuine: 18,
-  suspicious: 4,
-  counterfeit: 2,
-};
-
-const chartData = [40, 65, 45, 80, 55, 90, 70];
-
-const recentVerifications: { name: string; status: VerificationStatus }[] = [
-  { name: "Amoxicillin 500mg", status: "genuine" },
-  { name: "Ibuprofen 200mg", status: "genuine" },
-  { name: "Unknown Package", status: "counterfeit" },
-];
-
 // Card view - shows on dashboard
 export function VerifyCard() {
+  const [data, setData] = useState<VerificationStats | null>(null);
+
+  useEffect(() => {
+    getVerificationStats()
+      .then(setData)
+      .catch(() => setData(null));
+  }, []);
+
+  const stats = data?.stats ?? { genuine: 0, suspicious: 0, counterfeit: 0 };
+  const recent = data?.recent ?? [];
+
   return (
     <div className="space-y-3 h-full">
       {/* Stats row */}
@@ -225,40 +221,54 @@ export function VerifyCard() {
         </div>
       </div>
 
-      {/* Mini chart */}
-      <div className="bg-slate-800/30 rounded-lg p-3">
-        <div className="text-xs text-slate-500 mb-2">Last 7 days</div>
-        <div className="flex items-end gap-1 h-12">
-          {chartData.map((h, i) => (
-            <div key={i} className="flex-1 bg-cyan-500/30 rounded-t" style={{ height: `${h}%` }}>
-              <div className="w-full bg-cyan-500 rounded-t" style={{ height: "40%" }}></div>
-            </div>
-          ))}
-        </div>
+      {/* Total count */}
+      <div className="bg-slate-800/30 rounded-lg p-3 text-center">
+        <div className="text-2xl font-bold text-cyan-400">{data?.total ?? 0}</div>
+        <div className="text-xs text-slate-500">Total Verifications</div>
       </div>
 
       {/* Recent */}
       <div className="space-y-1 text-xs">
-        {recentVerifications.map((item, i) => (
-          <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-            <span className="text-slate-400">{item.name}</span>
-            {item.status === "genuine" ? (
-              <CheckCircle2 size={14} className={verificationStyles[item.status].text} />
-            ) : (
-              <XCircle size={14} className={verificationStyles[item.status].text} />
-            )}
-          </div>
-        ))}
+        {recent.length === 0 ? (
+          <div className="text-slate-500 text-center py-2">No verifications yet</div>
+        ) : (
+          recent.slice(0, 3).map((item) => {
+            const status = item.result.toLowerCase() as VerificationStatus;
+            return (
+              <div key={item.id} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                <span className="text-slate-400 truncate">{item.hash}</span>
+                {status === "genuine" ? (
+                  <CheckCircle2 size={14} className={verificationStyles[status]?.text ?? "text-slate-400"} />
+                ) : (
+                  <XCircle size={14} className={verificationStyles[status]?.text ?? "text-slate-400"} />
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
 }
 
-export function VerifyExpanded() {
+interface VerifyExpandedProps {
+  result: VerificationResult | null;
+  setResult: (result: VerificationResult | null) => void;
+  imageUrl: string | null;
+  setImageUrl: (url: string | null) => void;
+  error: string | null;
+  setError: (error: string | null) => void;
+}
+
+export function VerifyExpanded({
+  result,
+  setResult,
+  imageUrl,
+  setImageUrl,
+  error,
+  setError,
+}: VerifyExpandedProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<VerificationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (file: File) => {
@@ -335,11 +345,31 @@ export function VerifyExpanded() {
 
       {result && result.detections.length > 0 && imageUrl && (
         <div className="space-y-4">
-          <div className="bg-emerald-500/10 border border-emerald-500/50 rounded-lg p-4">
-            <h3 className="text-emerald-400 font-semibold mb-1">Detection Results</h3>
-            <p className="text-slate-300">
-              {result.detections.length} package{result.detections.length > 1 ? "s" : ""} detected
-            </p>
+          <div className={`rounded-lg p-4 ${
+            result.blockchain?.already_verified
+              ? "bg-amber-500/10 border border-amber-500/50"
+              : "bg-emerald-500/10 border border-emerald-500/50"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`font-semibold mb-1 ${
+                  result.blockchain?.already_verified ? "text-amber-400" : "text-emerald-400"
+                }`}>
+                  {result.blockchain?.already_verified ? "Record Exists" : "New Record"}
+                </h3>
+                <p className="text-slate-300">
+                  {result.detections.length} package{result.detections.length > 1 ? "s" : ""} detected
+                </p>
+              </div>
+              {result.blockchain && (
+                <div className="text-xs text-right">
+                  <div className="text-slate-500">Block: <span className="text-slate-400">{result.blockchain.block}</span></div>
+                  <div className="text-slate-500 max-w-50 truncate">
+                    Tx: <span className="text-slate-400">{result.blockchain.tx_hash}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -351,13 +381,6 @@ export function VerifyExpanded() {
               />
             ))}
           </div>
-
-          {result.blockchain && (
-            <div className="text-xs text-slate-500 space-y-1 pt-3 border-t border-slate-800">
-              <div>Block: <span className="text-slate-400">{result.blockchain.block}</span></div>
-              <div className="truncate">Tx: <span className="text-slate-400">{result.blockchain.tx_hash}</span></div>
-            </div>
-          )}
         </div>
       )}
 

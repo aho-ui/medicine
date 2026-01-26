@@ -11,8 +11,8 @@ class VisionInspection(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    lot = models.ForeignKey(MedicineLot, on_delete=models.CASCADE, related_name="vision_inspections")
-    image = models.ImageField(upload_to="inspections/%Y/%m/%d/")
+    lot = models.ForeignKey(MedicineLot, on_delete=models.CASCADE, related_name="vision_inspections", null=True, blank=True)
+    image = models.ImageField(upload_to="inspections/%Y/%m/%d/", null=True, blank=True)
     result = models.CharField(max_length=20, choices=RESULT_CHOICES)
     confidence = models.FloatField()
     bbox = models.JSONField(blank=True, null=True)

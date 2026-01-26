@@ -2,7 +2,9 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db.models import Count
 from .services import call_colab_api, verify_with_colab
+from .models import VisionInspection
 from blockchain.utils import record_verification, get_verification, get_all_verifications, hash_image
 
 
@@ -45,6 +47,15 @@ def verify_and_record(request):
                 "detections": [],
                 "blockchain": None
             })
+
+        # Save each detection to VisionInspection
+        for detection in verification["detections"]:
+            VisionInspection.objects.create(
+                result=detection["result"].upper(),
+                confidence=detection["cnn_confidence"],
+                bbox=detection["bbox"],
+                hash=verification["image_hash"]
+            )
 
         blockchain = record(
             verification["image_hash"],
@@ -91,5 +102,39 @@ def list_blockchain_verifications(request):
     try:
         verifications = get_all_verifications()
         return JsonResponse({"verifications": verifications})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def verification_stats(request):
+    """Get verification statistics from VisionInspection."""
+    try:
+        # Count by result type
+        counts = VisionInspection.objects.values("result").annotate(count=Count("id"))
+        stats = {"genuine": 0, "suspicious": 0, "counterfeit": 0}
+        for item in counts:
+            key = item["result"].lower()
+            if key in stats:
+                stats[key] = item["count"]
+
+        # Get recent inspections (last 10)
+        recent = VisionInspection.objects.order_by("-created_at")[:10]
+        recent_list = [
+            {
+                "id": str(inspection.id),
+                "result": inspection.result,
+                "confidence": inspection.confidence,
+                "created_at": inspection.created_at.isoformat(),
+                "hash": inspection.hash[:16] + "..."
+            }
+            for inspection in recent
+        ]
+
+        return JsonResponse({
+            "stats": stats,
+            "recent": recent_list,
+            "total": sum(stats.values())
+        })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
