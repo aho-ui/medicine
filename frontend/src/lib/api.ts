@@ -44,12 +44,16 @@ export interface VerificationResult {
   } | null;
 }
 
-export async function verifyMedicine(image: File): Promise<VerificationResult> {
+export async function verifyMedicine(image: File, lotId?: string): Promise<VerificationResult> {
   const formData = new FormData();
   formData.append("image", image);
+  if (lotId) {
+    formData.append("lot_id", lotId);
+  }
 
   const res = await fetch(`${VISION_URL}/verify/`, {
     method: "POST",
+    credentials: "include",
     body: formData,
   });
 
@@ -74,14 +78,269 @@ export interface VerificationStats {
     confidence: number;
     created_at: string;
     hash: string;
+    image_name: string;
+    image: string | null;
   }[];
   total: number;
 }
 
 export async function getVerificationStats(): Promise<VerificationStats> {
-  const res = await fetch(`${VISION_URL}/stats/`);
+  const res = await fetch(`${VISION_URL}/stats/`, { credentials: "include" });
   if (!res.ok) {
     throw new Error("Failed to fetch stats");
   }
   return res.json();
+}
+
+export interface VerificationRecord {
+  id: string;
+  result: string;
+  confidence: number;
+  created_at: string;
+  hash: string;
+  image_name: string;
+  image: string | null;
+  status?: string;
+}
+
+export interface PendingVerification extends VerificationRecord {
+  lot_id: string | null;
+  lot_number: string | null;
+}
+
+export async function getVerificationsByType(result: string): Promise<VerificationRecord[]> {
+  const res = await fetch(`${VISION_URL}/stats/?result=${result}`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch verifications");
+  }
+  const data = await res.json();
+  return data.records || [];
+}
+
+export interface Lot {
+  id: string;
+  product_name: string;
+  product_code: string;
+  lot_number: string;
+  producer: string;
+  manufacture_date: string;
+  expiry_date: string;
+  total_quantity: number;
+  remaining_quantity: number;
+  verification_status: "PENDING" | "APPROVED" | "NONE";
+  pending_count: number;
+  approved_count: number;
+}
+
+export async function getLots(): Promise<Lot[]> {
+  const res = await fetch(`${API_URL}/lots/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch lots");
+  }
+  const data = await res.json();
+  return data.lots || [];
+}
+
+export async function getUnverifiedLots(): Promise<Lot[]> {
+  const res = await fetch(`${API_URL}/lots/?unverified=true`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch lots");
+  }
+  const data = await res.json();
+  return data.lots || [];
+}
+
+export interface LotDetail extends Omit<Lot, "verification_status" | "pending_count" | "approved_count"> {
+  blockchain_txid: string | null;
+}
+
+export async function getLotById(lotId: string): Promise<LotDetail> {
+  const res = await fetch(`${API_URL}/lots/${lotId}/`, { credentials: "include" });
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error("Lot not found");
+    }
+    throw new Error("Failed to fetch lot");
+  }
+  return res.json();
+}
+
+export async function getLotVerifications(lotId: string): Promise<VerificationRecord[]> {
+  const res = await fetch(`${VISION_URL}/lots/${lotId}/verifications/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch verifications");
+  }
+  const data = await res.json();
+  return data.verifications || [];
+}
+
+export async function getPendingVerifications(): Promise<PendingVerification[]> {
+  const res = await fetch(`${VISION_URL}/verifications/pending/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch pending verifications");
+  }
+  const data = await res.json();
+  return data.verifications || [];
+}
+
+export async function approveVerification(verificationId: string, action: "approve" | "reject"): Promise<{ status: string; id: string }> {
+  const res = await fetch(`${VISION_URL}/verifications/${verificationId}/approve/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to update verification");
+  }
+  return res.json();
+}
+
+export interface AuditLog {
+  action: string;
+  user: string;
+  task: string;
+  target_id: string;
+  timestamp: string;
+}
+
+export async function getAuditLogs(): Promise<AuditLog[]> {
+  const res = await fetch(`${API_URL}/audit/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch audit logs");
+  }
+  const data = await res.json();
+  return data.logs || [];
+}
+
+export interface LotInput {
+  product_name: string;
+  product_code: string;
+  lot_number: string;
+  manufacture_date: string;
+  expiry_date: string;
+  total_quantity: number;
+}
+
+export async function createLot(lot: LotInput): Promise<{ id: string; lot_number: string }> {
+  const res = await fetch(`${API_URL}/lots/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(lot),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to create lot");
+  }
+  return res.json();
+}
+
+export interface DistributionEvent {
+  id: string;
+  lot_id: string;
+  lot_number: string;
+  actor: string;
+  quantity: number;
+  location: string;
+  timestamp: string;
+}
+
+export async function getDistributionEvents(): Promise<DistributionEvent[]> {
+  const res = await fetch(`${API_URL}/distribution/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch distribution events");
+  }
+  const data = await res.json();
+  return data.events || [];
+}
+
+export interface DistributionInput {
+  lot_id: string;
+  quantity: number;
+  location: string;
+}
+
+export async function createDistribution(input: DistributionInput): Promise<{ id: string; remaining_quantity: number }> {
+  const res = await fetch(`${API_URL}/distribution/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to create distribution");
+  }
+  return res.json();
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  company_name: string;
+}
+
+export async function getUsers(): Promise<User[]> {
+  const res = await fetch(`${API_URL}/users/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch users");
+  }
+  const data = await res.json();
+  return data.users || [];
+}
+
+export interface UserInput {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+  company_name?: string;
+}
+
+export async function createUser(input: UserInput): Promise<{ id: number; username: string }> {
+  const res = await fetch(`${API_URL}/users/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to create user");
+  }
+  return res.json();
+}
+
+export async function login(userId: number): Promise<User> {
+  const res = await fetch(`${API_URL}/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Login failed");
+  }
+  return res.json();
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_URL}/auth/logout/`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const res = await fetch(`${API_URL}/auth/me/`, {
+    credentials: "include",
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.user;
 }

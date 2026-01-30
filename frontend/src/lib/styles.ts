@@ -22,14 +22,14 @@ export type VerificationStatus = keyof typeof verificationStyles;
 
 // Audit log types
 export const logTypeStyles = {
-  VRF: { text: "text-emerald-400", label: "VRF" },
+  CREATE: { text: "text-cyan-400", label: "CREATE" },
   VERIFY: { text: "text-emerald-400", label: "VERIFY" },
-  DST: { text: "text-purple-400", label: "DST" },
   DISTRIBUTE: { text: "text-purple-400", label: "DISTRIBUTE" },
-  REG: { text: "text-amber-400", label: "REG" },
+  UPDATE: { text: "text-amber-400", label: "UPDATE" },
+  DELETE: { text: "text-red-400", label: "DELETE" },
+  LOGIN: { text: "text-blue-400", label: "LOGIN" },
+  LOGOUT: { text: "text-slate-400", label: "LOGOUT" },
   REGISTER: { text: "text-amber-400", label: "REGISTER" },
-  USR: { text: "text-blue-400", label: "USR" },
-  USER: { text: "text-blue-400", label: "USER" },
 } as const;
 
 export type LogType = keyof typeof logTypeStyles;

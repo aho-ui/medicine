@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from core.models import MedicineLot
+from core.models import MedicineLot, User
 
 
 class VisionInspection(models.Model):
@@ -10,13 +10,22 @@ class VisionInspection(models.Model):
         ("COUNTERFEIT", "Counterfeit"),
     ]
 
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     lot = models.ForeignKey(MedicineLot, on_delete=models.CASCADE, related_name="vision_inspections", null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="verifications")
     image = models.ImageField(upload_to="inspections/%Y/%m/%d/", null=True, blank=True)
     result = models.CharField(max_length=20, choices=RESULT_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     confidence = models.FloatField()
     bbox = models.JSONField(blank=True, null=True)
     hash = models.CharField(max_length=64)
+    image_name = models.CharField(max_length=255, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
