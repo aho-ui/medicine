@@ -5,7 +5,7 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self):
-        from django.db import OperationalError, ProgrammingError
+        from django.db import IntegrityError, OperationalError, ProgrammingError
         from .models import User
         try:
             if not User.objects.filter(role="ADMIN").exists():
@@ -17,5 +17,5 @@ class CoreConfig(AppConfig):
                     company_name="MedVerifyChain",
                 )
                 print("Created default admin user")
-        except (OperationalError, ProgrammingError):
+        except (IntegrityError, OperationalError, ProgrammingError):
             pass
