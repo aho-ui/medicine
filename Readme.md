@@ -1,8 +1,18 @@
+## Run Using Docker
+
+```bash
+docker compose up
+```
+
+This pulls all images and starts the full stack (PostgreSQL, Ganache, Vision Server, Django, Frontend). Access the app at http://localhost:3000.
+
+---
+
+## Run Manually
+
 Create New Database:
 
 psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE medicine_db;"
-
-## How to Run
 
 Each step should be run in a separate terminal.
 

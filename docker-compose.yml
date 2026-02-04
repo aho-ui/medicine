@@ -33,9 +33,7 @@ services:
       retries: 5
 
   vision:
-    build:
-      context: ./colab
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/medicine-vision:latest
     ports:
       - "5000:5000"
     healthcheck:
@@ -46,9 +44,7 @@ services:
       start_period: 60s
 
   django:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/medicine-django:latest
     ports:
       - "8000:8000"
     environment:
@@ -72,11 +68,7 @@ services:
         condition: service_started
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    image: ghcr.io/aho-ui/medicine-frontend:latest
     ports:
       - "3000:3000"
     depends_on:
