@@ -1,0 +1,10 @@
+django
+django-cors-headers
+psycopg2-binary
+python-dotenv
+pillow
+requests
+qrcode
+web3
+py-solc-x
+gunicorn

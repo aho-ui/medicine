@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: medicine_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ganache:
+    image: trufflesuite/ganache:latest
+    command:
+      - "--mnemonic"
+      - "cigar embrace tenant ceiling dose build expect mule valley opinion enemy cereal"
+      - "--host"
+      - "0.0.0.0"
+    ports:
+      - "8545:8545"
+    volumes:
+      - ganache_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http = require('http'); http.get('http://localhost:8545', (r) => process.exit(r.statusCode ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  vision:
+    build:
+      context: ./colab
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=medicine_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - COLAB_API_URL=http://vision:5000
+      - BLOCKCHAIN_URL=http://ganache:8545
+      - ADMIN_ADDRESS=0x926F9367E871eb3d03c6141814ABd7E0a9A8Ad88
+      - ADMIN_PRIVATE_KEY=0x85d049210c7ed97a4bdd909ec6671e1f2b566ce48d2a1b0f167a0c62a4278790
+    volumes:
+      - ./media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ganache:
+        condition: service_healthy
+      vision:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - django
+
+volumes:
+  postgres_data:
+  ganache_data:
