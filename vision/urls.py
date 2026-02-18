@@ -9,6 +9,7 @@ urlpatterns = [
     path("verifications/pending/", views.pending_verifications, name="pending_verifications"),
     path("verifications/<uuid:verification_id>/approve/", views.approve_verification, name="approve_verification"),
     path("verifications/<uuid:verification_id>/link/", views.link_verification, name="link_verification"),
+    path("verifications/<uuid:verification_id>/unlink/", views.unlink_verification, name="unlink_verification"),
     path("verifications/unlinked/", views.unlinked_verifications, name="unlinked_verifications"),
     path("blockchain/record/", views.record_to_blockchain, name="blockchain_record"),
     path("blockchain/verification/<int:verification_id>/", views.get_blockchain_verification, name="blockchain_get"),

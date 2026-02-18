@@ -206,6 +206,18 @@ export async function linkVerification(verificationId: string, lotId: string): P
   return res.json();
 }
 
+export async function unlinkVerification(verificationId: string): Promise<{ status: string; id: string }> {
+  const res = await fetch(`${VISION_URL}/verifications/${verificationId}/unlink/`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to unlink verification");
+  }
+  return res.json();
+}
+
 export async function approveVerification(verificationId: string, action: "approve" | "reject"): Promise<{ status: string; id: string }> {
   const res = await fetch(`${VISION_URL}/verifications/${verificationId}/approve/`, {
     method: "POST",

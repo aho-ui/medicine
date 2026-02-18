@@ -244,6 +244,23 @@ def link_verification(request, verification_id):
     return JsonResponse({"status": "linked", "id": str(inspection.id), "lot_id": str(lot.id)})
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def unlink_verification(request, verification_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Not authenticated"}, status=401)
+
+    try:
+        inspection = VisionInspection.objects.get(id=verification_id)
+    except VisionInspection.DoesNotExist:
+        return JsonResponse({"error": "Verification not found"}, status=404)
+
+    inspection.lot = None
+    inspection.save()
+    log_action("UNLINK", "Unlinked verification from lot", user=request.user, target_id=str(inspection.id))
+    return JsonResponse({"status": "unlinked", "id": str(inspection.id)})
+
+
 @require_http_methods(["GET"])
 def unlinked_verifications(request):
     if not request.user.is_authenticated:

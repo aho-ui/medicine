@@ -1,8 +1,8 @@
 "use client";
 import { FlaskConical, X, Download, CheckCircle2, XCircle, Loader2, Clock, Check, Ban, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getLots, getLotVerifications, getPendingVerifications, approveVerification, getUnlinkedVerifications, linkVerification, type Lot, type VerificationRecord, type PendingVerification, API_URL } from "@/lib/api";
-import { Link2 } from "lucide-react";
+import { getLots, getLotVerifications, getPendingVerifications, approveVerification, getUnlinkedVerifications, linkVerification, unlinkVerification, type Lot, type VerificationRecord, type PendingVerification, API_URL } from "@/lib/api";
+import { Link2, Link2Off } from "lucide-react";
 
 function QRModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
   const qrUrl = `${API_URL}/lots/${lot.id}/qr/`;
@@ -96,6 +96,7 @@ function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [linkLoading, setLinkLoading] = useState<string | null>(null);
+  const [unlinkLoading, setUnlinkLoading] = useState<string | null>(null);
   const [unlinkedOpen, setUnlinkedOpen] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
@@ -139,6 +140,18 @@ function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
       console.error("Failed to link verification:", err);
     } finally {
       setLinkLoading(null);
+    }
+  };
+
+  const handleUnlink = async (verificationId: string) => {
+    setUnlinkLoading(verificationId);
+    try {
+      await unlinkVerification(verificationId);
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to unlink verification:", err);
+    } finally {
+      setUnlinkLoading(null);
     }
   };
 
@@ -412,19 +425,31 @@ function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
                   return (
                     <div
                       key={v.id}
-                      className={`relative rounded-lg border-2 ${borderColor} overflow-hidden cursor-pointer hover:opacity-80 transition-opacity`}
-                      onClick={() => v.image && setSelectedImage({ url: `${baseUrl}${v.image}`, name: v.image_name })}
+                      className={`relative rounded-lg border-2 ${borderColor} overflow-hidden group`}
                     >
-                      {v.image && (
-                        <img
-                          src={`${baseUrl}${v.image}`}
-                          alt={v.image_name}
-                          className="w-full h-20 object-cover"
-                        />
-                      )}
+                      <div
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => v.image && setSelectedImage({ url: `${baseUrl}${v.image}`, name: v.image_name })}
+                      >
+                        {v.image && (
+                          <img
+                            src={`${baseUrl}${v.image}`}
+                            alt={v.image_name}
+                            className="w-full h-20 object-cover"
+                          />
+                        )}
+                      </div>
                       <div className="absolute bottom-1 right-1">
                         <Icon size={16} className={iconColor} />
                       </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleUnlink(v.id); }}
+                        disabled={unlinkLoading === v.id}
+                        className="absolute top-1 right-1 p-1 rounded bg-slate-900/80 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        title="Unlink from lot"
+                      >
+                        {unlinkLoading === v.id ? <Loader2 size={12} className="animate-spin" /> : <Link2Off size={12} />}
+                      </button>
                     </div>
                   );
                 })}
