@@ -183,6 +183,29 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
   return data.verifications || [];
 }
 
+export async function getUnlinkedVerifications(): Promise<VerificationRecord[]> {
+  const res = await fetch(`${VISION_URL}/verifications/unlinked/`, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error("Failed to fetch unlinked verifications");
+  }
+  const data = await res.json();
+  return data.verifications || [];
+}
+
+export async function linkVerification(verificationId: string, lotId: string): Promise<{ status: string; id: string; lot_id: string }> {
+  const res = await fetch(`${VISION_URL}/verifications/${verificationId}/link/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ lot_id: lotId }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to link verification");
+  }
+  return res.json();
+}
+
 export async function approveVerification(verificationId: string, action: "approve" | "reject"): Promise<{ status: string; id: string }> {
   const res = await fetch(`${VISION_URL}/verifications/${verificationId}/approve/`, {
     method: "POST",

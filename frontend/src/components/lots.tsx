@@ -1,7 +1,8 @@
 "use client";
-import { FlaskConical, X, Download, CheckCircle2, XCircle, Loader2, Clock, Check, Ban } from "lucide-react";
+import { FlaskConical, X, Download, CheckCircle2, XCircle, Loader2, Clock, Check, Ban, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getLots, getLotVerifications, getPendingVerifications, approveVerification, type Lot, type VerificationRecord, type PendingVerification, API_URL } from "@/lib/api";
+import { getLots, getLotVerifications, getPendingVerifications, approveVerification, getUnlinkedVerifications, linkVerification, type Lot, type VerificationRecord, type PendingVerification, API_URL } from "@/lib/api";
+import { Link2 } from "lucide-react";
 
 function QRModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
   const qrUrl = `${API_URL}/lots/${lot.id}/qr/`;
@@ -88,11 +89,14 @@ function ImageModal({ imageUrl, imageName, onClose }: { imageUrl: string; imageN
 function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
   const [verifications, setVerifications] = useState<VerificationRecord[]>([]);
   const [pendingVerifications, setPendingVerifications] = useState<PendingVerification[]>([]);
+  const [unlinked, setUnlinked] = useState<VerificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [linkLoading, setLinkLoading] = useState<string | null>(null);
+  const [unlinkedOpen, setUnlinkedOpen] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
@@ -109,18 +113,32 @@ function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [approved, pending] = await Promise.all([
+      const [approved, pending, unlinkedList] = await Promise.all([
         getLotVerifications(lot.id),
         getPendingVerifications(),
+        getUnlinkedVerifications(),
       ]);
       setVerifications(approved);
-      // Filter pending to only show those for this lot
       setPendingVerifications(pending.filter((p) => p.lot_id === lot.id));
+      setUnlinked(unlinkedList);
     } catch {
       setVerifications([]);
       setPendingVerifications([]);
+      setUnlinked([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLink = async (verificationId: string) => {
+    setLinkLoading(verificationId);
+    try {
+      await linkVerification(verificationId, lot.id);
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to link verification:", err);
+    } finally {
+      setLinkLoading(null);
     }
   };
 
@@ -329,6 +347,46 @@ function LotDetailModal({ lot, onClose }: { lot: Lot; onClose: () => void }) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Unlinked Verifications */}
+          {unlinked.length > 0 && (
+            <div className="border-t border-slate-700 pt-3">
+              <button
+                onClick={() => setUnlinkedOpen(!unlinkedOpen)}
+                className="flex items-center gap-2 w-full text-left mb-2 group"
+              >
+                <Link2 size={14} className="text-cyan-400" />
+                <div className="text-cyan-400 text-xs uppercase tracking-wide">Unlinked Verifications</div>
+                <span className="text-xs text-slate-500">({unlinked.length})</span>
+                <ChevronDown size={14} className={`text-cyan-400 ml-auto transition-transform ${unlinkedOpen ? "rotate-180" : ""}`} />
+              </button>
+              {unlinkedOpen && (
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {unlinked.map((v) => {
+                    const status = v.result.toLowerCase();
+                    const textColor = status === "genuine" ? "text-emerald-400" :
+                      status === "suspicious" ? "text-amber-400" : "text-red-400";
+
+                    return (
+                      <div key={v.id} className="flex items-center gap-2 rounded bg-slate-800/50 px-2 py-1.5">
+                        <div className={`text-xs font-medium ${textColor} w-20 shrink-0`}>{v.result}</div>
+                        <div className="text-xs text-slate-400 truncate flex-1">{v.image_name || "Unnamed"}</div>
+                        <div className="text-xs text-slate-500 shrink-0">{new Date(v.created_at).toLocaleDateString()}</div>
+                        <button
+                          onClick={() => handleLink(v.id)}
+                          disabled={linkLoading === v.id}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 text-xs transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {linkLoading === v.id ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+                          Link
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

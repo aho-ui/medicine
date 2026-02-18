@@ -217,6 +217,57 @@ def pending_verifications(request):
     return JsonResponse({"verifications": records})
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def link_verification(request, verification_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Not authenticated"}, status=401)
+
+    try:
+        inspection = VisionInspection.objects.get(id=verification_id)
+    except VisionInspection.DoesNotExist:
+        return JsonResponse({"error": "Verification not found"}, status=404)
+
+    data = json.loads(request.body)
+    lot_id = data.get("lot_id")
+    if not lot_id:
+        return JsonResponse({"error": "lot_id required"}, status=400)
+
+    try:
+        lot = MedicineLot.objects.get(id=lot_id)
+    except MedicineLot.DoesNotExist:
+        return JsonResponse({"error": "Lot not found"}, status=404)
+
+    inspection.lot = lot
+    inspection.save()
+    log_action("LINK", "Linked verification to lot", user=request.user, target_id=str(inspection.id))
+    return JsonResponse({"status": "linked", "id": str(inspection.id), "lot_id": str(lot.id)})
+
+
+@require_http_methods(["GET"])
+def unlinked_verifications(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Not authenticated"}, status=401)
+
+    qs = VisionInspection.objects.filter(lot__isnull=True)
+    if request.user.role != "ADMIN":
+        qs = qs.filter(user=request.user)
+
+    records = [
+        {
+            "id": str(r.id),
+            "result": r.result,
+            "confidence": r.confidence,
+            "created_at": r.created_at.isoformat(),
+            "hash": r.hash[:16] + "...",
+            "image_name": r.image_name,
+            "image": r.image.url if r.image else None,
+        }
+        for r in qs.order_by("-created_at")
+    ]
+    return JsonResponse({"verifications": records})
+
+
 @require_http_methods(["GET"])
 def verification_stats(request):
     try:

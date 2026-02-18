@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { ShieldCheck, CheckCircle2, XCircle, Upload, Loader2, X } from "lucide-react";
 import { verificationStyles, type VerificationStatus } from "@/lib/styles";
 import { verifyMedicine, getVerificationStats, getVerificationsByType, getUnverifiedLots, type VerificationResult, type Detection, type VerificationStats, type VerificationRecord, type Lot } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 function CroppedImage({
   imageUrl,
@@ -571,10 +572,14 @@ export function VerifyExpanded({
   const [lots, setLots] = useState<Lot[]>([]);
   const [selectedLotId, setSelectedLotId] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const showLotSelector = user && !["PHARMACY", "CONSUMER"].includes(user.role);
 
   useEffect(() => {
-    getUnverifiedLots().then(setLots).catch(() => setLots([]));
-  }, []);
+    if (showLotSelector) {
+      getUnverifiedLots().then(setLots).catch(() => setLots([]));
+    }
+  }, [showLotSelector]);
 
   const handleFileSelect = async (file: File) => {
     setIsLoading(true);
@@ -610,22 +615,24 @@ export function VerifyExpanded({
     <div className="space-y-4">
       <p className="text-slate-400">Upload an image to verify medicine authenticity.</p>
 
-      {/* Lot selection */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-slate-400">Link to Lot:</label>
-        <select
-          value={selectedLotId}
-          onChange={(e) => setSelectedLotId(e.target.value)}
-          className="flex-1 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-cyan-400 focus:border-cyan-500 focus:outline-none"
-        >
-          <option value="">None (unlinked)</option>
-          {lots.map((lot) => (
-            <option key={lot.id} value={lot.id}>
-              {lot.lot_number} - {lot.product_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Lot selection - only for ADMIN, MANUFACTURER, DISTRIBUTOR */}
+      {showLotSelector && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-400">Link to Lot:</label>
+          <select
+            value={selectedLotId}
+            onChange={(e) => setSelectedLotId(e.target.value)}
+            className="flex-1 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-cyan-400 focus:border-cyan-500 focus:outline-none"
+          >
+            <option value="">None (unlinked)</option>
+            {lots.map((lot) => (
+              <option key={lot.id} value={lot.id}>
+                {lot.lot_number} - {lot.product_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Upload area */}
       <div
