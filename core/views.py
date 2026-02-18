@@ -4,11 +4,10 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from functools import wraps
 import json
-import csv
 import qrcode
-from io import BytesIO, StringIO
+from io import BytesIO
 from .models import MedicineLot, DistributionEvent, User, AuditLog
-from .utils import log_action
+from .utils import log_action, generate_audit_pdf
 
 
 def require_role(*allowed_roles):
@@ -288,11 +287,13 @@ def lot_qr(request, lot_id):
 @require_http_methods(["GET"])
 def audit_export(request):
     logs = AuditLog.objects.order_by("-created_at")
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Action", "User", "Task", "Target ID", "Timestamp"])
-    for log in logs:
-        writer.writerow([log.action, log.username, log.task, log.target_id, log.created_at.isoformat()])
-    response = HttpResponse(output.getvalue(), content_type="text/csv")
-    response["Content-Disposition"] = "attachment; filename=audit_logs.csv"
+    action = request.GET.get("action", "")
+    date = request.GET.get("date", "")
+    if action:
+        logs = logs.filter(action=action)
+    if date:
+        logs = logs.filter(created_at__date=date)
+    buffer = generate_audit_pdf(logs)
+    response = HttpResponse(buffer, content_type="application/pdf")
+    response["Content-Disposition"] = "attachment; filename=audit_logs.pdf"
     return response

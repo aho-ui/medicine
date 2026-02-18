@@ -8,3 +8,4 @@ qrcode
 web3
 py-solc-x
 gunicorn
+reportlab
