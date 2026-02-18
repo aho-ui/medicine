@@ -56,17 +56,28 @@ export function AuditCard({ refreshKey = 0 }: { refreshKey?: number }) {
 export function AuditExpanded({ refreshKey = 0 }: { refreshKey?: number }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filter, setFilter] = useState("All Actions");
+  const [dateFilter, setDateFilter] = useState("All Dates");
 
   useEffect(() => {
     getAuditLogs().then(setLogs).catch(() => {});
   }, [refreshKey]);
 
-  const filteredLogs = filter === "All Actions"
-    ? logs
-    : logs.filter((log) => log.action === filter.toUpperCase());
+  const availableDates = Array.from(
+    new Set(logs.map((log) => new Date(log.timestamp).toISOString().split("T")[0]))
+  ).sort().reverse();
+
+  const filteredLogs = logs.filter((log) => {
+    const matchAction = filter === "All Actions" || log.action === filter.toUpperCase();
+    const matchDate = dateFilter === "All Dates" || new Date(log.timestamp).toISOString().split("T")[0] === dateFilter;
+    return matchAction && matchDate;
+  });
 
   const handleExport = () => {
-    window.open(`${API_URL}/audit/export/`, "_blank");
+    const params = new URLSearchParams();
+    if (filter !== "All Actions") params.set("action", filter.toUpperCase());
+    if (dateFilter !== "All Dates") params.set("date", dateFilter);
+    const query = params.toString();
+    window.open(`${API_URL}/audit/export/${query ? "?" + query : ""}`, "_blank");
   };
 
   return (
@@ -82,6 +93,16 @@ export function AuditExpanded({ refreshKey = 0 }: { refreshKey?: number }) {
             <option>Create</option>
             <option>Verify</option>
             <option>Distribute</option>
+          </select>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 focus:border-cyan-500 focus:outline-none"
+          >
+            <option>All Dates</option>
+            {availableDates.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
           </select>
         </div>
         <button
